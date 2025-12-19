@@ -1,0 +1,43 @@
+{
+  "name": "getmailer-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for GetMailer - Send emails from AI assistants",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "getmailer-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "getmailer",
+    "ai",
+    "claude"
+  ],
+  "author": "GetMailer",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/getmailer/getmailer"
+  }
+}
