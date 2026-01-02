@@ -63,7 +63,7 @@ async function publicApiRequest(endpoint, options = {}) {
 var server = new Server(
   {
     name: "getmailer-mcp",
-    version: "1.0.5"
+    version: "1.0.6"
   },
   {
     capabilities: {
@@ -93,6 +93,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           }
         },
         required: ["email", "password"]
+      }
+    },
+    {
+      name: "account_status",
+      description: "Check your account status including email verification, subscription plan, and sending limits. Use this to see if you can send emails.",
+      inputSchema: {
+        type: "object",
+        properties: {}
       }
     },
     {
@@ -410,6 +418,57 @@ Then restart your MCP client to apply the configuration.
             {
               type: "text",
               text: JSON.stringify(result, null, 2) + "\n\n--- Configuration Instructions ---\n" + configInstructions
+            }
+          ]
+        };
+      }
+      case "account_status": {
+        const result = await apiRequest("/api/account/status");
+        let statusMessage = `Account Status for ${result.account.email}
+`;
+        statusMessage += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+
+`;
+        if (result.account.emailVerified) {
+          statusMessage += `\u2705 Email: Verified
+`;
+        } else {
+          statusMessage += `\u274C Email: NOT VERIFIED
+`;
+          statusMessage += `   \u2192 Check your inbox for the verification link!
+`;
+        }
+        if (result.subscription) {
+          statusMessage += `\u{1F4E6} Plan: ${result.subscription.plan}
+`;
+          statusMessage += `\u{1F4E7} Emails remaining: ${result.subscription.emailsRemaining}
+`;
+        }
+        statusMessage += `\u{1F310} Verified domains: ${result.domains.verifiedCount}
+`;
+        statusMessage += `
+`;
+        if (result.canSendEmails) {
+          statusMessage += `\u2705 You CAN send emails
+`;
+        } else {
+          statusMessage += `\u274C You CANNOT send emails yet
+`;
+          if (result.warnings.length > 0) {
+            statusMessage += `
+Required actions:
+`;
+            result.warnings.forEach((w) => {
+              statusMessage += `  \u2022 ${w.message}
+`;
+            });
+          }
+        }
+        return {
+          content: [
+            {
+              type: "text",
+              text: statusMessage
             }
           ]
         };

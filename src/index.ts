@@ -85,7 +85,7 @@ async function publicApiRequest<T>(
 const server = new Server(
   {
     name: 'getmailer-mcp',
-    version: '1.0.5',
+    version: '1.0.6',
   },
   {
     capabilities: {
@@ -119,6 +119,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           },
         },
         required: ['email', 'password'],
+      },
+    },
+    {
+      name: 'account_status',
+      description:
+        'Check your account status including email verification, subscription plan, and sending limits. Use this to see if you can send emails.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {},
       },
     },
     {
@@ -451,6 +460,59 @@ Then restart your MCP client to apply the configuration.
                 JSON.stringify(result, null, 2) +
                 '\n\n--- Configuration Instructions ---\n' +
                 configInstructions,
+            },
+          ],
+        };
+      }
+
+      case 'account_status': {
+        const result = await apiRequest<{
+          account: { email: string; emailVerified: boolean };
+          subscription: { plan: string; emailsRemaining: number | string } | null;
+          domains: { verifiedCount: number };
+          canSendEmails: boolean;
+          warnings: Array<{ code: string; message: string }>;
+        }>('/api/account/status');
+
+        let statusMessage = `Account Status for ${result.account.email}\n`;
+        statusMessage += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        // Verification status
+        if (result.account.emailVerified) {
+          statusMessage += `✅ Email: Verified\n`;
+        } else {
+          statusMessage += `❌ Email: NOT VERIFIED\n`;
+          statusMessage += `   → Check your inbox for the verification link!\n`;
+        }
+
+        // Subscription
+        if (result.subscription) {
+          statusMessage += `📦 Plan: ${result.subscription.plan}\n`;
+          statusMessage += `📧 Emails remaining: ${result.subscription.emailsRemaining}\n`;
+        }
+
+        // Domains
+        statusMessage += `🌐 Verified domains: ${result.domains.verifiedCount}\n`;
+
+        // Can send?
+        statusMessage += `\n`;
+        if (result.canSendEmails) {
+          statusMessage += `✅ You CAN send emails\n`;
+        } else {
+          statusMessage += `❌ You CANNOT send emails yet\n`;
+          if (result.warnings.length > 0) {
+            statusMessage += `\nRequired actions:\n`;
+            result.warnings.forEach((w) => {
+              statusMessage += `  • ${w.message}\n`;
+            });
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: statusMessage,
             },
           ],
         };
