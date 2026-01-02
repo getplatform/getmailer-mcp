@@ -8,20 +8,25 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 
-// Get API key from environment
+// Get API key from environment (optional - only required for authenticated tools)
 const API_KEY = process.env.GETMAILER_API_KEY;
 const API_URL = process.env.GETMAILER_API_URL || 'https://getmailer.app';
 
-if (!API_KEY) {
-  console.error('GETMAILER_API_KEY environment variable is required');
-  process.exit(1);
+// Helper to check if API key is configured
+function requireApiKey(): void {
+  if (!API_KEY) {
+    throw new Error(
+      'GETMAILER_API_KEY is not configured. Use the signup tool to create an account and get an API key, then add it to your MCP config.'
+    );
+  }
 }
 
-// API helper
+// API helper for authenticated requests
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  requireApiKey();
   const url = `${API_URL}${endpoint}`;
 
   const response = await fetch(url, {
@@ -47,11 +52,40 @@ async function apiRequest<T>(
   return response.json();
 }
 
+// API helper for public (unauthenticated) requests
+async function publicApiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    let errorMessage = response.statusText;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || errorMessage;
+    } catch {
+      // Ignore
+    }
+    throw new Error(`API Error: ${errorMessage}`);
+  }
+
+  return response.json();
+}
+
 // Create server
 const server = new Server(
   {
     name: 'getmailer-mcp',
-    version: '1.0.0',
+    version: '1.0.5',
   },
   {
     capabilities: {
@@ -63,6 +97,30 @@ const server = new Server(
 // Define tools
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
+    {
+      name: 'signup',
+      description:
+        'Create a new GetMailer account. Returns an API key that you can use to send emails. No authentication required.',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          email: {
+            type: 'string',
+            description: 'Your email address',
+          },
+          password: {
+            type: 'string',
+            description:
+              'Password (min 8 chars, must include uppercase, lowercase, and number)',
+          },
+          name: {
+            type: 'string',
+            description: 'Your name (optional)',
+          },
+        },
+        required: ['email', 'password'],
+      },
+    },
     {
       name: 'send_email',
       description: 'Send a transactional email via GetMailer',
@@ -349,6 +407,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
+      case 'signup': {
+        // Public endpoint - no API key required
+        const result = await publicApiRequest<{
+          success: boolean;
+          user: { id: string; email: string; name?: string };
+          apiKey: string;
+          message: string;
+          nextSteps: string[];
+        }>('/api/public/signup', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: args?.email,
+            password: args?.password,
+            name: args?.name,
+          }),
+        });
+
+        const configInstructions = `
+To start using GetMailer, add your API key to your MCP configuration:
+
+Claude Desktop (claude_desktop_config.json):
+{
+  "mcpServers": {
+    "getmailer": {
+      "command": "npx",
+      "args": ["getmailer-mcp"],
+      "env": {
+        "GETMAILER_API_KEY": "${result.apiKey}"
+      }
+    }
+  }
+}
+
+Then restart your MCP client to apply the configuration.
+`;
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text:
+                JSON.stringify(result, null, 2) +
+                '\n\n--- Configuration Instructions ---\n' +
+                configInstructions,
+            },
+          ],
+        };
+      }
+
       case 'send_email': {
         const result = await apiRequest<{ email: unknown; suppressed?: string[] }>(
           '/api/emails',

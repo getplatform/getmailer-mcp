@@ -1,6 +1,50 @@
 # GetMailer MCP Server
 
+[![MCP Badge](https://lobehub.com/badge/mcp/getmailer-getmailer-mcp)](https://lobehub.com/mcp/getmailer-getmailer-mcp)
+
 MCP (Model Context Protocol) server for [GetMailer](https://getmailer.app) - Send transactional emails from AI assistants like Claude.
+
+## Quick Start
+
+The fastest way to get started is to sign up directly through MCP:
+
+**1. Add the MCP server to Claude Desktop** (no API key needed yet):
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "getmailer": {
+      "command": "npx",
+      "args": ["getmailer-mcp"]
+    }
+  }
+}
+```
+
+**2. Ask Claude to sign you up:**
+
+> "Sign me up for GetMailer with email user@example.com and password MyPassword123"
+
+**3. Claude will return your API key.** Update your config:
+
+```json
+{
+  "mcpServers": {
+    "getmailer": {
+      "command": "npx",
+      "args": ["getmailer-mcp"],
+      "env": {
+        "GETMAILER_API_KEY": "gm_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+**4. Restart Claude Desktop** and start sending emails!
 
 ## Installation
 
@@ -8,9 +52,9 @@ MCP (Model Context Protocol) server for [GetMailer](https://getmailer.app) - Sen
 npm install -g getmailer-mcp
 ```
 
-## Setup with Claude Desktop
+## Setup with Claude Desktop (Existing Users)
 
-Add this to your Claude Desktop configuration file:
+If you already have an API key, add this to your Claude Desktop configuration file:
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -45,6 +89,20 @@ Or if installed globally:
 ```
 
 ## Available Tools
+
+### signup
+
+Create a new GetMailer account directly from Claude. Returns an API key immediately.
+
+**Parameters:**
+- `email` (required): Your email address
+- `password` (required): Password (min 8 chars, must include uppercase, lowercase, and number)
+- `name`: Your name (optional)
+
+**Example:**
+```
+Sign me up for GetMailer with my email developer@example.com
+```
 
 ### send_email
 
@@ -177,11 +235,15 @@ Once configured, you can ask Claude:
 
 ## Environment Variables
 
-- `GETMAILER_API_KEY` (required): Your GetMailer API key
+- `GETMAILER_API_KEY`: Your GetMailer API key (optional for signup, required for other tools)
 - `GETMAILER_API_URL`: Custom API URL (default: https://getmailer.app)
 
 ## Get Your API Key
 
+**Option 1: Sign up via MCP** (Recommended)
+- Use the `signup` tool directly from Claude - no web browser needed!
+
+**Option 2: Sign up via web**
 1. Sign up at [getmailer.app](https://getmailer.app)
 2. Go to [API Keys](https://getmailer.app/api-keys)
 3. Create a new API key

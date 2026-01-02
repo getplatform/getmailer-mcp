@@ -11,11 +11,15 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 var API_KEY = process.env.GETMAILER_API_KEY;
 var API_URL = process.env.GETMAILER_API_URL || "https://getmailer.app";
-if (!API_KEY) {
-  console.error("GETMAILER_API_KEY environment variable is required");
-  process.exit(1);
+function requireApiKey() {
+  if (!API_KEY) {
+    throw new Error(
+      "GETMAILER_API_KEY is not configured. Use the signup tool to create an account and get an API key, then add it to your MCP config."
+    );
+  }
 }
 async function apiRequest(endpoint, options = {}) {
+  requireApiKey();
   const url = `${API_URL}${endpoint}`;
   const response = await fetch(url, {
     ...options,
@@ -36,10 +40,30 @@ async function apiRequest(endpoint, options = {}) {
   }
   return response.json();
 }
+async function publicApiRequest(endpoint, options = {}) {
+  const url = `${API_URL}${endpoint}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    }
+  });
+  if (!response.ok) {
+    let errorMessage = response.statusText;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || errorMessage;
+    } catch {
+    }
+    throw new Error(`API Error: ${errorMessage}`);
+  }
+  return response.json();
+}
 var server = new Server(
   {
     name: "getmailer-mcp",
-    version: "1.0.0"
+    version: "1.0.5"
   },
   {
     capabilities: {
@@ -49,6 +73,28 @@ var server = new Server(
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
+    {
+      name: "signup",
+      description: "Create a new GetMailer account. Returns an API key that you can use to send emails. No authentication required.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          email: {
+            type: "string",
+            description: "Your email address"
+          },
+          password: {
+            type: "string",
+            description: "Password (min 8 chars, must include uppercase, lowercase, and number)"
+          },
+          name: {
+            type: "string",
+            description: "Your name (optional)"
+          }
+        },
+        required: ["email", "password"]
+      }
+    },
     {
       name: "send_email",
       description: "Send a transactional email via GetMailer",
@@ -332,6 +378,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   try {
     switch (name) {
+      case "signup": {
+        const result = await publicApiRequest("/api/public/signup", {
+          method: "POST",
+          body: JSON.stringify({
+            email: args?.email,
+            password: args?.password,
+            name: args?.name
+          })
+        });
+        const configInstructions = `
+To start using GetMailer, add your API key to your MCP configuration:
+
+Claude Desktop (claude_desktop_config.json):
+{
+  "mcpServers": {
+    "getmailer": {
+      "command": "npx",
+      "args": ["getmailer-mcp"],
+      "env": {
+        "GETMAILER_API_KEY": "${result.apiKey}"
+      }
+    }
+  }
+}
+
+Then restart your MCP client to apply the configuration.
+`;
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2) + "\n\n--- Configuration Instructions ---\n" + configInstructions
+            }
+          ]
+        };
+      }
       case "send_email": {
         const result = await apiRequest(
           "/api/emails",
