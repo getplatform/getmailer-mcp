@@ -92,10 +92,12 @@ Or if installed globally:
 
 ### signup
 
-Create a new GetMailer account directly from Claude. Returns an API key immediately.
+Create a new GetMailer account directly from Claude. Returns an API key and sends a verification email.
+
+**Important:** You must verify your email before you can send emails. Check your inbox after signing up!
 
 **Parameters:**
-- `email` (required): Your email address
+- `email` (required): Your email address (no disposable emails)
 - `password` (required): Password (min 8 chars, must include uppercase, lowercase, and number)
 - `name`: Your name (optional)
 
@@ -103,6 +105,24 @@ Create a new GetMailer account directly from Claude. Returns an API key immediat
 ```
 Sign me up for GetMailer with my email developer@example.com
 ```
+
+### account_status
+
+Check your account status including email verification, subscription plan, and sending limits.
+
+**Parameters:** None
+
+**Example:**
+```
+Check my GetMailer account status
+```
+
+**Returns:**
+- Email verification status
+- Subscription plan and remaining emails
+- Number of verified domains
+- Whether you can send emails
+- Any required actions (verify email, add domain, etc.)
 
 ### send_email
 

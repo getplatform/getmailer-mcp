@@ -63,7 +63,7 @@ async function publicApiRequest(endpoint, options = {}) {
 var server = new Server(
   {
     name: "getmailer-mcp",
-    version: "1.0.6"
+    version: "1.0.7"
   },
   {
     capabilities: {
