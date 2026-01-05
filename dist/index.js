@@ -538,7 +538,7 @@ Required actions:
       case "verify_domain": {
         const result = await apiRequest("/api/domains/verify", {
           method: "POST",
-          body: JSON.stringify({ id: args?.id })
+          body: JSON.stringify({ domainId: args?.id })
         });
         return {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }]

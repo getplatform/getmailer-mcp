@@ -590,7 +590,7 @@ Then restart your MCP client to apply the configuration.
       case 'verify_domain': {
         const result = await apiRequest('/api/domains/verify', {
           method: 'POST',
-          body: JSON.stringify({ id: args?.id }),
+          body: JSON.stringify({ domainId: args?.id }),
         });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
