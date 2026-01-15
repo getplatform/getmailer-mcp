@@ -1,6 +1,6 @@
 {
   "name": "getmailer-mcp",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "MCP Server for GetMailer - Send emails from AI assistants",
   "type": "module",
   "main": "dist/index.js",

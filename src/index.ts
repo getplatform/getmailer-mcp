@@ -85,7 +85,7 @@ async function publicApiRequest<T>(
 const server = new Server(
   {
     name: 'getmailer-mcp',
-    version: '1.0.7',
+    version: '1.1.0',
   },
   {
     capabilities: {
@@ -407,6 +407,76 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ['id'],
       },
     },
+    {
+      name: 'list_inbox',
+      description: 'List received/inbound emails in your inbox',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          limit: {
+            type: 'number',
+            description: 'Number of emails to return (default: 20)',
+          },
+          cursor: {
+            type: 'string',
+            description: 'Pagination cursor for next page',
+          },
+          status: {
+            type: 'string',
+            enum: ['unread', 'read', 'all'],
+            description: 'Filter by read status (default: all)',
+          },
+        },
+      },
+    },
+    {
+      name: 'get_inbox_email',
+      description: 'Get details of a specific inbound email including full content',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          id: {
+            type: 'string',
+            description: 'Inbox email ID',
+          },
+        },
+        required: ['id'],
+      },
+    },
+    {
+      name: 'mark_inbox_read',
+      description: 'Mark one or more inbox emails as read or unread',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Email IDs to mark',
+          },
+          read: {
+            type: 'boolean',
+            description: 'Set to true to mark as read, false to mark as unread (default: true)',
+          },
+        },
+        required: ['ids'],
+      },
+    },
+    {
+      name: 'delete_inbox_email',
+      description: 'Delete one or more emails from the inbox',
+      inputSchema: {
+        type: 'object' as const,
+        properties: {
+          ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Email IDs to delete',
+          },
+        },
+        required: ['ids'],
+      },
+    },
   ],
 }));
 
@@ -647,6 +717,49 @@ Then restart your MCP client to apply the configuration.
 
       case 'get_batch': {
         const result = await apiRequest(`/api/batch/${args?.id}`);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'list_inbox': {
+        const params = new URLSearchParams();
+        if (args?.limit) params.set('limit', String(args.limit));
+        if (args?.cursor) params.set('cursor', String(args.cursor));
+        if (args?.status) params.set('status', String(args.status));
+        const result = await apiRequest(`/api/inbox?${params}`);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'get_inbox_email': {
+        const result = await apiRequest(`/api/inbox/${args?.id}`);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'mark_inbox_read': {
+        const result = await apiRequest('/api/inbox/mark-read', {
+          method: 'POST',
+          body: JSON.stringify({
+            ids: args?.ids,
+            read: args?.read !== false,
+          }),
+        });
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      }
+
+      case 'delete_inbox_email': {
+        const result = await apiRequest('/api/inbox', {
+          method: 'DELETE',
+          body: JSON.stringify({
+            ids: args?.ids,
+          }),
+        });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
         };
