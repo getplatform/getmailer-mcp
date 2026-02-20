@@ -10,3 +10,8 @@ test-results/
 .claude/
 
 /screenshots
+
+# Root-level screenshots/design reference images
+/*.png
+/*.jpg
+/*.jpeg
